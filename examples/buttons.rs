@@ -1,4 +1,4 @@
-use dioxus::{events::KeyCode, prelude::*};
+use dioxus::prelude::*;
 
 fn main() {
     blitz::launch(app);
