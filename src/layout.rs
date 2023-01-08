@@ -3,10 +3,45 @@ use std::sync::{Arc, Mutex};
 use dioxus::core::ElementId;
 use dioxus_native_core::layout_attributes::apply_layout_attributes;
 use dioxus_native_core::node_ref::{AttributeMask, NodeMask};
-use dioxus_native_core::state::ChildDepState;
+use dioxus_native_core::state::{ChildDepState, NodeDepState};
 use taffy::prelude::*;
 
+use crate::text::font_size::FontSize;
 use crate::text::TextContext;
+
+// this collects the nodes of the children of a given node
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct StretchLayoutChildren {
+    pub children: Vec<Node>,
+}
+
+impl ChildDepState for StretchLayoutChildren {
+    type Ctx = ();
+    type DepState = (StretchLayout,);
+
+    const NODE_MASK: NodeMask = NodeMask::new();
+    /// Setup the layout
+    fn reduce<'a>(
+        &mut self,
+        _: dioxus_native_core::node_ref::NodeView,
+        children: impl Iterator<Item = (&'a StretchLayout,)>,
+        _: &Self::Ctx,
+    ) -> bool
+    where
+        Self::DepState: 'a,
+    {
+        // Set all direct nodes as our children
+        let mut child_layout = vec![];
+        for (l,) in children {
+            child_layout.push(l.node.unwrap());
+        }
+        *self = Self {
+            children: child_layout,
+        };
+
+        true
+    }
+}
 
 #[derive(Clone, Default, Debug)]
 pub struct StretchLayout {
@@ -21,30 +56,32 @@ impl PartialEq<Self> for StretchLayout {
     }
 }
 
-impl ChildDepState for StretchLayout {
+impl NodeDepState for StretchLayout {
     type Ctx = (Arc<Mutex<Taffy>>, Arc<Mutex<TextContext>>);
-    type DepState = (Self,);
+    type DepState = (FontSize, StretchLayoutChildren);
 
     const NODE_MASK: NodeMask = NodeMask::new_with_attrs(AttributeMask::All).with_text();
     /// Setup the layout
-    fn reduce<'a>(
+    fn reduce(
         &mut self,
         node: dioxus_native_core::node_ref::NodeView,
-        children: impl Iterator<Item = (&'a Self,)>,
+        (
+            FontSize(font_size),
+            StretchLayoutChildren {
+                children: children_layout,
+            },
+        ): (&FontSize, &StretchLayoutChildren),
         (taffy, text_context): &Self::Ctx,
-    ) -> bool
-    where
-        Self::DepState: 'a,
-    {
+    ) -> bool {
         let mut taffy = taffy.lock().unwrap();
         let mut changed = false;
         if let Some(text) = node.text() {
             let mut text_context = text_context.lock().unwrap();
-            let width = text_context.get_text_width(None, 16.0, text);
+            let width = text_context.get_text_width(None, *font_size, text);
 
             let style = Style {
                 size: Size {
-                    height: Dimension::Points(16.0),
+                    height: Dimension::Points(*font_size),
 
                     width: Dimension::Points(width as f32),
                 },
@@ -83,15 +120,9 @@ impl ChildDepState for StretchLayout {
                 apply_layout_attributes("height", "100%", &mut style);
             }
 
-            // Set all direct nodes as our children
-            let mut child_layout = vec![];
-            for (l,) in children {
-                child_layout.push(l.node.unwrap());
-            }
-
             if let Some(n) = self.node {
-                if taffy.children(n).unwrap() != child_layout {
-                    taffy.set_children(n, &child_layout).unwrap();
+                if &taffy.children(n).unwrap() != children_layout {
+                    taffy.set_children(n, children_layout).unwrap();
                     changed = true;
                 }
                 if self.style != style {
@@ -99,7 +130,7 @@ impl ChildDepState for StretchLayout {
                     changed = true;
                 }
             } else {
-                self.node = Some(taffy.new_with_children(style, &child_layout).unwrap());
+                self.node = Some(taffy.new_with_children(style, children_layout).unwrap());
                 changed = true;
             }
 

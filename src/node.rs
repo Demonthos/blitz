@@ -2,28 +2,33 @@ use dioxus_native_core::state::*;
 use dioxus_native_core_macro::State;
 
 use crate::focus::Focus;
-use crate::layout::StretchLayout;
+use crate::layout::{StretchLayout, StretchLayoutChildren};
 use crate::mouse::MouseEffected;
 use crate::style::{BackgroundColor, Border, ForgroundColor};
+use crate::text::font_size::FontSize;
 use dioxus_native_core_macro::sorted_str_slice;
 
 #[derive(Clone, PartialEq, Default, State, Debug)]
 pub(crate) struct BlitzNodeState {
     #[node_dep_state()]
     pub(crate) mouse_effected: MouseEffected,
-    #[child_dep_state(layout, Arc<Mutex<Taffy>>)]
+    #[child_dep_state(layout)]
+    pub children_layout: StretchLayoutChildren,
+    #[node_dep_state((font_size, children_layout), Arc<Mutex<Taffy>>)]
     pub layout: StretchLayout,
     #[parent_dep_state(color)]
     pub color: ForgroundColor,
+    #[parent_dep_state(font_size)]
+    pub font_size: FontSize,
     #[node_dep_state()]
     pub bg_color: BackgroundColor,
     #[node_dep_state()]
     pub border: Border,
     #[node_dep_state()]
     pub focus: Focus,
-    pub focused: bool,
     #[node_dep_state()]
     pub prevent_default: PreventDefault,
+    pub focused: bool,
 }
 
 #[derive(PartialEq, Debug, Clone)]

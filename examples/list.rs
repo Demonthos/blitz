@@ -14,6 +14,7 @@ fn app(cx: Scope) -> Element {
                     rsx! {
                         li {
                             key: "{y}",
+                            font_size: "{y*10}px",
                             "hello"
                         }
                     }
