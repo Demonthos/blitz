@@ -13,7 +13,9 @@ use crate::layout::TaffyLayout;
 use crate::style::BackgroundColor;
 use crate::style::Border;
 use crate::style::ForgroundColor;
+use crate::text::font_style::Font;
 use crate::text::TextContext;
+use crate::util::axis_size;
 use crate::util::Resolve;
 use crate::util::{translate_color, Axis};
 use crate::RealDom;
@@ -99,9 +101,10 @@ fn render_node(
                 );
             } else {
                 let stroke_color = translate_color(&node.get::<Border>().unwrap().colors.top);
+                let font_size = node.get::<Font>().unwrap().size;
                 let stroke = Stroke::new(node.get::<Border>().unwrap().width.top.resolve(
-                    Axis::Min,
-                    &layout.size,
+                    axis_size(Axis::Min, &layout.size),
+                    font_size,
                     viewport_size,
                 ) as f32);
                 scene_builder.stroke(&stroke, Affine::IDENTITY, stroke_color, None, &shape);
@@ -137,25 +140,42 @@ pub(crate) fn get_shape(
     let height: f64 = layout.size.height.into();
     let border: &Border = node.get().unwrap();
     let focused = node.get::<Focused>().filter(|focused| focused.0).is_some();
+    let font_size = node.get::<Font>().unwrap().size;
     let left_border_width = if focused {
         FOCUS_BORDER_WIDTH
     } else {
-        border.width.left.resolve(axis, &rect, viewport_size)
+        border
+            .width
+            .left
+            .resolve(axis_size(axis, &rect), font_size, viewport_size)
+            .into()
     };
     let right_border_width = if focused {
         FOCUS_BORDER_WIDTH
     } else {
-        border.width.right.resolve(axis, &rect, viewport_size)
+        border
+            .width
+            .right
+            .resolve(axis_size(axis, &rect), font_size, viewport_size)
+            .into()
     };
     let top_border_width = if focused {
         FOCUS_BORDER_WIDTH
     } else {
-        border.width.top.resolve(axis, &rect, viewport_size)
+        border
+            .width
+            .top
+            .resolve(axis_size(axis, &rect), font_size, viewport_size)
+            .into()
     };
     let bottom_border_width = if focused {
         FOCUS_BORDER_WIDTH
     } else {
-        border.width.bottom.resolve(axis, &rect, viewport_size)
+        border
+            .width
+            .bottom
+            .resolve(axis_size(axis, &rect), font_size, viewport_size)
+            .into()
     };
 
     // The stroke is drawn on the outside of the border, so we need to offset the rect by the border width for each side.
@@ -170,22 +190,30 @@ pub(crate) fn get_shape(
         x_end,
         y_end,
         (
-            border.radius.top_left.0.resolve(axis, &rect, viewport_size),
+            border
+                .radius
+                .top_left
+                .0
+                .resolve(axis_size(axis, &rect), font_size, viewport_size)
+                .into(),
             border
                 .radius
                 .top_right
                 .0
-                .resolve(axis, &rect, viewport_size),
+                .resolve(axis_size(axis, &rect), font_size, viewport_size)
+                .into(),
             border
                 .radius
                 .bottom_right
                 .0
-                .resolve(axis, &rect, viewport_size),
+                .resolve(axis_size(axis, &rect), font_size, viewport_size)
+                .into(),
             border
                 .radius
                 .bottom_left
                 .0
-                .resolve(axis, &rect, viewport_size),
+                .resolve(axis_size(axis, &rect), font_size, viewport_size)
+                .into(),
         ),
     )
 }

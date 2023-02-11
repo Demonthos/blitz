@@ -8,6 +8,9 @@ use vello::{
     SceneBuilder,
 };
 
+pub mod font_style;
+pub mod text_style;
+
 const FONT_DATA: &[u8] = include_bytes!("Roboto-Regular.ttf");
 
 pub struct TextContext {
